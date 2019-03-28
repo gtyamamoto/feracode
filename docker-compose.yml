@@ -1,38 +1,32 @@
 version: "2"
 services:
-  frontend:
-    build: "./frontend"
+  node:
+    build: "./"
     restart: always
-    ports:
-      - "80:80"
     volumes:
       - ./frontend:/frontend
-      - /frontend/node_modules
-    links:
-      - api
-    networks: 
-      - webappnetwork
-  api:
-    build: "./api"
-    restart: always
-    ports:
-      - "8080:8080"
-    volumes:
       - ./api:/api
-      - /api/node_modules
     depends_on:
       - couchdb
+    expose:
+      - "8080"
+      - "5000"
+    networks: 
+      - webappnetwork
+  nginx:
+    image         : nginx:stable
+    container_name: Nginx
+    build         : ./nginx
+    links         :
+      - node
+    ports:
+      - "80:80"
+      - "443:443"
     networks: 
       - webappnetwork
   couchdb:
-    container_name: couchdb
-    hostname: couchdb.local
-    image: telephoneorg/couchdb
-    environment:
-      COUCHDB_DEV_INIT: "true"
-      COUCHDB_ADMIN_USER: admin
-      COUCHDB_ADMIN_PASS: secret
-      ERLANG_COOKIE: test-cookie
+    image: couchdb
+    build: ./couchdb
     ports:
       - "5984:5984"
       - "5986:5986"

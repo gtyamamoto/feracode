@@ -1,33 +1,20 @@
 import React, { Component } from 'react';
-import logo from './logo.svg';
-import './App.css';
 
 class App extends Component {
   state = {
     message:''
   }
   componentDidMount =  async ()=>{
-    const fetchserver = await fetch('http://localhost:8080');
+    const fetchserver = await fetch('/api');
     this.setState({message: await fetchserver.text()})
   }
   render() {
     return (
-      <div className="App">
-        <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <p>
-            Edit <code>src/App.js</code> and save to reload.
-          </p>
-          <p>{this.state.message}</p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn React
-          </a>
-        </header>
+      <div className="container">
+      <h3 className="p-3 my-2">Diapers List</h3>
+        <div className="row text-center">
+        <p>Test</p>
+        </div>
       </div>
     );
   }
