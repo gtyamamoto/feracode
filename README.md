@@ -2,6 +2,8 @@
 
  simple CMS for diapers products and simple sale creation and out of stock prediction by using PouchDB + Node + React running in a docker environment
 
+ Sidenote : for the task to predict when the item will be out of stock, it was created another db in CouchDB to have the sales registry and with fields of createdAt of when the sale was made, the calculation was made by simply getting the first two more recently sales for the given model and size, and it will be displayed for the client a time when it could be run out of stock.
+
 
 
 #Dependencies
