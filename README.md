@@ -7,12 +7,14 @@
 #Dependencies
 
  We used images from nginx,couchDB oficial repos from Dockerhub
- for Frontend, was used React + React Router + React Hooks;
+ for Frontend, was used React + React Router + React Hooks + ReactN( global variable management to simulate store for functional components to [see more](https://github.com/CharlesStover/reactn));
  Backend = express to build api,and to connect/manipulate the CouchDB, was used the [PouchDB](https://pouchdb.com/) ( a javascript abstraction from CouchDB)
 
 #Guidelines
  Install [Docker](https://docs.docker.com/v17.12/install/)
  Install [Docker Compose](https://docs.docker.com/compose/install/)
+
+ Since its a test environment, one might disable apache2 and couchdb services if its running ( or any other services at ports 80/5984/5986)
  To start the docker environment, first run in command line the docker-compose file by in a terminal at the root project directory:
     - docker-compose build
     - docker-compose up -d
