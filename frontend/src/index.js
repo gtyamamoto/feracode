@@ -4,23 +4,35 @@ import 'bootstrap/dist/css/bootstrap.css';
 import './index.css';
 import {BrowserRouter, Switch, Route} from  'react-router-dom'
 import App from './App';
-import Shop from './components/Shop';
+
 import ProductDetails from './components/ProductDetails';
 import * as serviceWorker from './serviceWorker';
 import Navbar from './components/navbar'
+import { setGlobal } from 'reactn';
+setGlobal( {diapers: [],
+    activeDiaper : {
+        description:'',
+        model:'',
+        sizes:[],
+        _id:null,
+    },
+    pagination : {
+        pages:0,
+        next:null
+    }});
 ReactDOM.render(
-    <Fragment>
+    
        
 <BrowserRouter>
 <Navbar />
 <Switch>
             <Route path="/" exact={true} component={App} />
-            <Route path="/shop" component={Shop} />
+           
+            <Route path="/productnew" component={ProductDetails} />
             <Route path="/product/:id" component={ProductDetails} />
         </Switch>
 </BrowserRouter>
 
-    </Fragment>
 
 
 , document.getElementById('root'));

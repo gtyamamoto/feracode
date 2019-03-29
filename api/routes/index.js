@@ -2,43 +2,51 @@ var express = require('express');
 var router = express.Router();
 const {diapersDB,salesDB} = require('../bin/database')
 const _ = require('lodash');
-/* GET home page. */
-router.get('/', function(req, res, next) {
-  console.log('test')
-  res.send('api server')
-});
+
 //diapers ENDPOINT
 router.get('/diapers', async function(req, res, next) {
    let {skip,limit,model,size,active,description} = req.query;
    let nextquery = [];
+   let indexes = [];
    const query = {
      selector:{
      },
-     skip:skip || 0,
-     limit: limit || 30
+     skip:Number(skip) || 0,
+     limit: Number(limit) || 30
    }
    if(model&&typeof model=='string'){
      query.selector.model = {$regex : "/" + model+"/ig"}
      nextquery.push('model='+model);
+     indexes.push('model')
    }
    if(size&&typeof size=='string'){
     query.selector.sizes = {$elemMatch:{size}}
     nextquery.push('size='+model);
+    indexes.push('sizes.[].size')
    }
-   if(active!==undefined&&active!==null&&typeof JSON.parse(active) =='boolean'){
-      query.active = JSON.parse(active);
+   if(active!==undefined&&active!==null&&(active=='true'||active=='false')&&typeof JSON.parse(active) =='boolean'){
+     console.log('ok')
+      query.selector.active = JSON.parse(active);
       nextquery.push('active='+active);
+      indexes.push('active')
    }
    if(description&& typeof description=='string'){
-    query.description = description;
+    query.selector.description = description;
     nextquery.push('description='+description);
+    indexes.push('description')
    }
  try {
-  var result = await db.find(query)
+  
+   console.log(query)
+  var result = await diapersDB.find(query)
   const countInfo = await diapersDB.info();
-  console.log(result)
-  res.send({limit:query.limit,skip:query.skip,total:countInfo.doc_count,next:query.limit + query.skip >= countInfo.doc_count ? null : `http://localhost${process.env.NODE_ENV==='production' ? '' : ':8080'}/api/diapers?limit=${limit}&skip=${limit + query.skip}${nextquery.length ? `&${nextquery.join('&')}` : ''}`,result});
+  const indexInfo = await diapersDB.getIndexes();
+  //FILTER INDEXES FROM DOCUMENT COUNT
+  const totalDocs = countInfo.doc_count - indexInfo.indexes.filter(el=>el.ddoc).length;
+  res.send({limit:query.limit,skip:query.skip,
+    pages:Math.ceil(totalDocs/query.limit),total:totalDocs,next:query.limit + query.skip >= totalDocs ? null : `http://localhost${process.env.NODE_ENV==='production' ? '' : ':8080'}/api/diapers?limit=${limit}&skip=${limit + query.skip}${nextquery.length ? `&${nextquery.join('&')}` : ''}`,results:result.docs});
  }catch(error) {
+   console.log(error)
     res.status(400).send(error);
 };
 });
@@ -64,7 +72,7 @@ router.post("/diapers", function(req, res) {
     else if(!sizes || !sizes.length) {
       return res.status(400).send({"status": "error", "message": "sizes at least one size is required"});
   }
-    diapersDB.post({model,description,sizes,active:true}).then(function(result) {
+    diapersDB.put({_id:model,model,description,sizes,active:true}).then(function(result) {
         res.send(result);
     }, function(error) {
         res.status(400).send(error);
@@ -76,14 +84,18 @@ router.put("/diapers/:id", async function(req, res) {
       return res.status(400).send({"status": "error", "message": "An `id` is required"});
   }
   try {
-    var doc = await db.get(req.params.id);
-     res.send( await db.put({
+    var doc = await diapersDB.get(req.params.id);
+    if(!doc){
+      res.status(400).send({"status": "error", "message": "no diaper found"});
+    }
+     res.send( await diapersDB.put({
       _id: req.params.id,
       _rev: doc._rev,
-      ... _.pick(req.body, ['model','description','sizes','acitve']
+      ... Object.assign(_.pick(req.body, ['model','description','sizes','active'],_.omit(doc,['_id','_rev']))
       )
     }));
   } catch (err) {
+    console.log(err)
     res.status(400).send(err);
   }
 });
@@ -108,7 +120,8 @@ router.delete("/diapers/:id", function(req, res) {
 //GET ALL sales
 router.get('/sales', function(req, res, next) {
   salesDB.allDocs({include_docs: true}).then(function(result) {
-    res.send(result.rows.map(item=>item.doc));
+    //filtering indexes from result
+    res.send(result.rows.map(item=>item.doc).filter(el=>!el.views));
 }, function(error) {
     res.status(400).send(error);
 });
@@ -136,7 +149,7 @@ router.post("/sales", function(req, res) {
     else if(!quantity) {
       return res.status(400).send({"status": "error", "message": "quantity is required"});
   }
-    salesDB.post({model,size,quantity,createdAt:new Date(),updatedAt:new Date()}).then(function(result) {
+    salesDB.post({model,size,quantity,createdAt:(new Date()).getTime(),updatedAt:(new Date()).getTime()}).then(function(result) {
         res.send(result);
     }, function(error) {
         res.status(400).send(error);
@@ -172,4 +185,54 @@ router.delete("/sales/:id", function(req, res) {
       res.status(400).send(error);
   });
 });
+
+
+//REPORTS -- diapers endsales
+
+router.get("/reports/diaper_stock",async function(req,res){
+  const {model,size} = req.query;
+  if(!model||!size){
+    return res.status(400).send({status:"error",message:"An `model` and `size` are required"});
+  }
+  //create or check for index to our query
+  try {
+    const IndexingSales = await salesDB.createIndex({index:{fields:['model','size','createdAt']}});
+    
+  } catch (error) {
+    console.log(error)
+  }
+  try {
+    const IndexingProducts = await diapersDB.createIndex({
+      index:{
+        fields:['model', 'sizes.[].size']
+      }
+    });
+  } catch (error) {
+    console.log(error)
+  }
+
+  const getLastTwoSales = await salesDB.find({selector:{model,size,createdAt:{$lte:(new Date()).getTime()}},limit:2,sort:[{createdAt:'desc'}]});
+  console.log(getLastTwoSales)
+  if(getLastTwoSales.docs.length<2){
+    return res.status(400).send({message:'no predicition available'})
+  }
+
+  const getStockCount = await diapersDB.find({selector:{model,sizes:{$elemMatch:{size}}},fields:['_id','sizes']})
+  console.log(getStockCount)
+  const findResult = getStockCount.docs.length ? getStockCount.docs[0].sizes : null;
+  if(!findResult){
+    return res.status(400).send({message:'no predicition available'})
+  }
+  const sizeTotal = findResult.find(el=>el.size==size).total
+  const timestamp = getLastTwoSales.docs[0].createdAt - getLastTwoSales.docs[1].createdAt;
+  res.send({
+    prediction:timestamp*sizeTotal/1000
+  })
+  
+
+  
+
+  
+})
+
 module.exports = router;

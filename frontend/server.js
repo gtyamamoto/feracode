@@ -6,8 +6,11 @@
 const express = require('express');
   const bodyParser = require('body-parser')
   const path = require('path');
+  const cors = require('cors');
+  
   const app = express();
   app.disable('x-powered-by');
+  app.use(cors())
   app.use(express.static(path.join(__dirname, 'build')));
   
   app.get('*', function (req, res) {
