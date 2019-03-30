@@ -8,7 +8,7 @@
 
 #Dependencies
 
- We used images from nginx,couchDB oficial repos from Dockerhub
+I used images from nginx,couchDB oficial repos from Dockerhub
  for Frontend, was used React + React Router + React Hooks + ReactN( global variable management to simulate store for functional components to [see more](https://github.com/CharlesStover/reactn));
  Backend = express to build api,and to connect/manipulate the CouchDB, was used the [PouchDB](https://pouchdb.com/) ( a javascript abstraction from CouchDB)
 
