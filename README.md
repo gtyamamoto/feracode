@@ -1,4 +1,4 @@
-# feracode
+# Description
 
  simple CMS for diapers products and simple sale creation and out of stock prediction by using PouchDB + Node + React running in a docker environment
 
